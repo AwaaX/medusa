@@ -33,7 +33,7 @@ medusaIntegrationTestRunner({
       await createAdminUser(dbConnection, adminHeaders, appContainer)
     })
 
-    describe.only("GET /admin/product-categories/:id", () => {
+    describe("GET /admin/product-categories/:id", () => {
       beforeEach(async () => {
         productCategoryParent = await productModuleService.createCategory({
           name: "category parent",
@@ -95,11 +95,48 @@ medusaIntegrationTestRunner({
     })
 
     describe("GET /admin/product-categories", () => {
-      beforeEach(async () => {})
+      // TODO/BREAKING: We don't support rank reordering upon creation in V2
+      //   New categories with the same parent are always added at the end of the "list"
+      beforeEach(async () => {
+        productCategoryParent = await productModuleService.createCategory({
+          name: "Mens",
+        })
+
+        productCategory = await productModuleService.createCategory({
+          name: "sweater",
+          parent_category_id: productCategoryParent.id,
+          is_internal: true,
+        })
+
+        productCategoryChild = await productModuleService.createCategory({
+          name: "cashmere",
+          parent_category_id: productCategory.id,
+        })
+
+        productCategoryChild0 = await productModuleService.createCategory({
+          name: "child0",
+          parent_category_id: productCategoryChild.id,
+        })
+
+        productCategoryChild1 = await productModuleService.createCategory({
+          name: "child1",
+          parent_category_id: productCategoryChild.id,
+        })
+
+        productCategoryChild2 = await productModuleService.createCategory({
+          name: "child2",
+          parent_category_id: productCategoryChild.id,
+        })
+
+        productCategoryChild3 = await productModuleService.createCategory({
+          name: "child3",
+          parent_category_id: productCategoryChild.id,
+        })
+      })
 
       it("gets list of product category with immediate children and parents", async () => {
         // BREAKING: To get the children tree, the query param include_descendants_tree must be used
-        const path = `/admin/product-categories?include_descendants_tree=true&limit=7`
+        const path = `/admin/product-categories?limit=7`
 
         const response = await api.get(path, adminHeaders)
 
@@ -112,28 +149,23 @@ medusaIntegrationTestRunner({
           expect.arrayContaining([
             expect.objectContaining({
               id: productCategoryChild.id,
-              // BREAKING: Only the parent category ID is returned by default in V2
               parent_category_id: productCategory.id,
               category_children: [
                 expect.objectContaining({
-                  id: productCategoryChild2.id,
-                  handle: productCategoryChild2.handle,
-                  rank: 0,
+                  id: productCategoryChild0.id,
+                  handle: productCategoryChild0.handle,
                 }),
                 expect.objectContaining({
                   id: productCategoryChild1.id,
                   handle: productCategoryChild1.handle,
-                  rank: 1,
                 }),
                 expect.objectContaining({
-                  id: productCategoryChild0.id,
-                  handle: productCategoryChild0.handle,
-                  rank: 2,
+                  id: productCategoryChild2.id,
+                  handle: productCategoryChild2.handle,
                 }),
                 expect.objectContaining({
                   id: productCategoryChild3.id,
                   handle: productCategoryChild3.handle,
-                  rank: 3,
                 }),
               ],
             }),
@@ -143,53 +175,48 @@ medusaIntegrationTestRunner({
                 expect.objectContaining({
                   id: productCategory.id,
                   handle: productCategory.handle,
-                  rank: 0,
                 }),
               ],
             }),
             expect.objectContaining({
               id: productCategoryChild2.id,
-              // BREAKING: Only the parent category ID is returned by default in V2
               parent_category_id: productCategoryChild.id,
               category_children: [],
-              rank: 0,
               handle: productCategoryChild2.handle,
             }),
             expect.objectContaining({
               id: productCategory.id,
-              // BREAKING: Only the parent category ID is returned by default in V2
               parent_category_id: productCategoryParent.id,
               category_children: [
                 expect.objectContaining({
                   id: productCategoryChild.id,
                   handle: productCategoryChild.handle,
-                  rank: 0,
                 }),
               ],
             }),
             expect.objectContaining({
-              id: productCategoryChild1.id,
-              // BREAKING: Only the parent category ID is returned by default in V2
-              parent_category_id: productCategoryChild.id,
-              category_children: [],
-              handle: productCategoryChild1.handle,
-              rank: 1,
-            }),
-            expect.objectContaining({
               id: productCategoryChild0.id,
-              // BREAKING: Only the parent category ID is returned by default in V2
               parent_category_id: productCategoryChild.id,
               category_children: [],
               handle: productCategoryChild0.handle,
-              rank: 2,
+            }),
+            expect.objectContaining({
+              id: productCategoryChild1.id,
+              parent_category_id: productCategoryChild.id,
+              category_children: [],
+              handle: productCategoryChild1.handle,
+            }),
+            expect.objectContaining({
+              id: productCategoryChild2.id,
+              parent_category_id: productCategoryChild.id,
+              category_children: [],
+              handle: productCategoryChild2.handle,
             }),
             expect.objectContaining({
               id: productCategoryChild3.id,
-              // BREAKING: Only the parent category ID is returned by default in V2
               parent_category_id: productCategoryChild.id,
               category_children: [],
               handle: productCategoryChild3.handle,
-              rank: 3,
             }),
           ])
         )
@@ -271,40 +298,37 @@ medusaIntegrationTestRunner({
         expect(response.data.product_categories).toEqual([
           expect.objectContaining({
             id: productCategoryParent.id,
-            rank: 0,
+            // BREAKING: Rank is a string in V2
+            rank: "0",
             handle: productCategoryParent.handle,
             category_children: [
               expect.objectContaining({
                 id: productCategory.id,
-                rank: 0,
+                rank: "0",
                 handle: productCategory.handle,
                 category_children: [
                   expect.objectContaining({
                     id: productCategoryChild.id,
                     category_children: [
                       expect.objectContaining({
-                        id: productCategoryChild2.id,
+                        id: productCategoryChild0.id,
                         category_children: [],
-                        handle: productCategoryChild2.handle,
-                        rank: 0,
+                        handle: productCategoryChild0.handle,
                       }),
                       expect.objectContaining({
                         id: productCategoryChild1.id,
                         category_children: [],
                         handle: productCategoryChild1.handle,
-                        rank: 1,
                       }),
                       expect.objectContaining({
-                        id: productCategoryChild0.id,
+                        id: productCategoryChild2.id,
                         category_children: [],
-                        handle: productCategoryChild0.handle,
-                        rank: 2,
+                        handle: productCategoryChild2.handle,
                       }),
                       expect.objectContaining({
                         id: productCategoryChild3.id,
                         category_children: [],
                         handle: productCategoryChild3.handle,
-                        rank: 3,
                       }),
                     ],
                   }),
@@ -325,20 +349,19 @@ medusaIntegrationTestRunner({
         expect(response.data.product_category).toEqual(
           expect.objectContaining({
             id: productCategoryChild1.id,
-            name: "rank 1",
-            rank: 1,
+            name: "child1",
             parent_category: expect.objectContaining({
               id: productCategoryChild.id,
               name: "cashmere",
-              rank: 0,
+              rank: "0",
               parent_category: expect.objectContaining({
                 id: productCategory.id,
                 name: "sweater",
-                rank: 0,
+                rank: "0",
                 parent_category: expect.objectContaining({
                   id: productCategoryParent.id,
                   name: "Mens",
-                  rank: 0,
+                  rank: "0",
                 }),
               }),
             }),
@@ -400,7 +423,7 @@ medusaIntegrationTestRunner({
                 id: productCategory.id,
               }),
               category_children: [],
-              rank: 0,
+              rank: "0",
             }),
           })
         )
@@ -433,7 +456,7 @@ medusaIntegrationTestRunner({
               // BREAKING: Only the parent category ID is returned by default in V2
               parent_category_id: productCategoryParent.id,
               category_children: [],
-              rank: 1,
+              rank: "1",
             }),
           })
         )
@@ -688,7 +711,7 @@ medusaIntegrationTestRunner({
               // BREAKING: Only the parent category ID is returned by default in V2
               parent_category_id: productCategory.id,
               category_children: [],
-              rank: 1,
+              rank: "1",
             }),
           })
         )
@@ -696,7 +719,8 @@ medusaIntegrationTestRunner({
 
       // TODO: This seems to be a redundant test, I would remove this in V2
       it("updating properties other than rank should not change its rank", async () => {
-        expect(productCategory.rank).toEqual(0)
+        // BREAKING: rank is a string in V2
+        expect(productCategory.rank).toEqual("0")
 
         const response = await api.post(
           `/admin/product-categories/${productCategory.id}`,
@@ -731,23 +755,27 @@ medusaIntegrationTestRunner({
             category_children: [
               expect.objectContaining({
                 id: productCategory.id,
-                rank: 0,
+                // BREAKING: rank is a string in V2
+                rank: "0",
                 category_children: [
                   expect.objectContaining({
                     id: productCategoryChild.id,
-                    rank: 0,
+                    // BREAKING: rank is a string in V2
+                    rank: "0",
                   }),
                 ],
               }),
               expect.objectContaining({
                 id: productCategory1.id,
                 category_children: [],
-                rank: 1,
+                // BREAKING: rank is a string in V2
+                rank: "1",
               }),
               expect.objectContaining({
                 id: productCategory2.id,
                 category_children: [],
-                rank: 2,
+                // BREAKING: rank is a string in V2
+                rank: "2",
               }),
             ],
           })
@@ -769,7 +797,7 @@ medusaIntegrationTestRunner({
             product_category: expect.objectContaining({
               // BREAKING: Only the parent category ID is returned by default in V2
               parent_category_id: productCategoryParent.id,
-              rank: 3,
+              rank: "3",
             }),
           })
         )
@@ -791,7 +819,7 @@ medusaIntegrationTestRunner({
             product_category: expect.objectContaining({
               // BREAKING: Only the parent category ID is returned by default in V2
               parent_category_id: productCategoryParent.id,
-              rank: 0,
+              rank: "0",
             }),
           })
         )
@@ -811,7 +839,7 @@ medusaIntegrationTestRunner({
         expect(response.data).toEqual(
           expect.objectContaining({
             product_category: expect.objectContaining({
-              rank: 0,
+              rank: "0",
             }),
           })
         )
@@ -829,7 +857,7 @@ medusaIntegrationTestRunner({
         expect(response.data).toEqual(
           expect.objectContaining({
             product_category: expect.objectContaining({
-              rank: 3,
+              rank: "3",
             }),
           })
         )
@@ -855,19 +883,19 @@ medusaIntegrationTestRunner({
             category_children: expect.arrayContaining([
               expect.objectContaining({
                 id: productCategoryChild2.id,
-                rank: 0,
+                rank: "0",
               }),
               expect.objectContaining({
                 id: productCategoryChild0.id,
-                rank: 1,
+                rank: "1",
               }),
               expect.objectContaining({
                 id: productCategoryChild1.id,
-                rank: 2,
+                rank: "2",
               }),
               expect.objectContaining({
                 id: productCategoryChild3.id,
-                rank: 3,
+                rank: "3",
               }),
             ]),
           })
